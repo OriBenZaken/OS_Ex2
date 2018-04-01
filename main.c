@@ -37,6 +37,18 @@ void stringToExecvArgs(char** args, char* s, int* waitFlag) {
     }
 }
 
+void changeDirectory(char** args) {
+    // command is: cd. Go to home directory
+    if (args[1] ==  NULL) {
+        chdir(getenv("HOME"));
+        return;
+    }
+    int successCd = chdir(args[1]);
+    if (successCd != 0) {
+        fprintf(stderr, "Failed to execute %s\n", args[0]);
+    }
+}
+
 void executeCommand(char** args, int waitFlag) {
     if (!strcmp(args[0], "exit")) {
         printf("WOW\n");
@@ -56,10 +68,7 @@ void executeCommand(char** args, int waitFlag) {
     if (pid == 0) {
         int i = 0;
         if (!strcmp(args[0], "cd")) {
-            int successCd = chdir(args[1]);
-            if (successCd != 0) {
-                fprintf(stderr, "Failed to execute %s\n", args[0]);
-            }
+            changeDirectory(args);
         } else {
             execvp(args[0], args);
             // execution failed. writing to STDERR

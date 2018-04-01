@@ -22,22 +22,19 @@ int getNumberOfWords(char* str) {
     return count + 1;
 }
 
-char** stringToExecvArgs(char* str) {
-/*    int numOfWords = getNumberOfWords(str);
-    char** args = (char**) malloc((numOfWords + 1) * sizeof(char*));
-    if (args == NULL) {
-        printf("Failed to execute command due to memory problem\n");
-        exit(1);
-    }*/
-    char** args[MAX_COMMAND_ARGS];
-    char* token = strtok(str, " ");
+void stringToExecvArgs(char** args, char* s, int* waitFlag) {
+    char* token = strtok(s, " ");
     int i = 0;
     while (token != NULL) {
         args[i++] = token;
         token = strtok(NULL, " ");
     }
-    args[i] = NULL;
-    return args;
+    if (strcmp(args[i - 1],"&") == 0) {
+        *waitFlag = DONT_WAIT;
+        args[i - 1] = NULL;
+    } else {
+        args[i] = NULL;
+    }
 }
 
 void executeCommand(char** args, int waitFlag) {
@@ -83,20 +80,8 @@ int main() {
         fgets(s, MAX_COMMAND_LENGTH, stdin);
         // remove new line character
         s[strlen(s) - 1] = '\0';
-
         int waitFlag = WAIT;
-        char* token = strtok(s, " ");
-        int i = 0;
-        while (token != NULL) {
-            args[i++] = token;
-            token = strtok(NULL, " ");
-        }
-        if (strcmp(args[i - 1],"&") == 0) {
-            waitFlag = DONT_WAIT;
-            args[i - 1] = NULL;
-        } else {
-            args[i] = NULL;
-        }
+        stringToExecvArgs(args, s, &waitFlag);
         executeCommand(args, waitFlag);
     }
     return 0;

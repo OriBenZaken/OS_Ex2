@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #define MAX_COMMAND_ARGS 10
-#define MAX_COMMAND_LENGTH 50
+#define MAX_COMMAND_LENGTH 100
 #define DONT_WAIT 0
 #define WAIT 1
 
@@ -41,6 +41,10 @@ char** stringToExecvArgs(char* str) {
 }
 
 void executeCommand(char** args, int waitFlag) {
+    if (!strcmp(args[0], "exit")) {
+        printf("WOW\n");
+        exit(0);
+    }
     pid_t pid;
     // create son process to execute the command
     pid = fork();
@@ -54,13 +58,16 @@ void executeCommand(char** args, int waitFlag) {
     // son process
     if (pid == 0) {
         int i = 0;
-        while(args[i] != NULL) {
-            printf("%s\n", args[i]);
-            i++;
+        if (!strcmp(args[0], "cd")) {
+            int successCd = chdir(args[1]);
+            if (successCd != 0) {
+                fprintf(stderr, "Failed to execute %s\n", args[0]);
+            }
+        } else {
+            execvp(args[0], args);
+            // execution failed. writing to STDERR
+            fprintf(stderr, "Failed to execute %s\n", args[0]);
         }
-        execv(args[0], args);
-        // execution failed. writing to STDERR
-        fprintf(stderr, "Failed to execute %s\n", args[0]);
     }
     if (waitFlag && pid != 0) {
         waitpid(pid, NULL, 0);

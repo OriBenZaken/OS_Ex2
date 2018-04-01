@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <wait.h>
+#include <stdbool.h>
 
 #define MAX_COMMAND_ARGS 10
 #define MAX_COMMAND_LENGTH 50
@@ -43,45 +44,53 @@ void executeCommand(char** args, int waitFlag) {
     pid_t pid;
     // create son process to execute the command
     pid = fork();
+    if (pid < 0) {
+        printf("fork error\n");
+        return;
+    }
     if (pid != 0) {
         printf("%d\n",pid);
     }
     // son process
     if (pid == 0) {
-        printf("bitch\n");
-
         int i = 0;
         while(args[i] != NULL) {
             printf("%s\n", args[i]);
             i++;
         }
         execv(args[0], args);
+        // execution failed. writing to STDERR
+        fprintf(stderr, "Failed to execute %s\n", args[0]);
     }
     if (waitFlag && pid != 0) {
-        waitpid(pid, NULL, WCONTINUED);
+        waitpid(pid, NULL, 0);
     }
 }
 
 int main() {
     char s[MAX_COMMAND_LENGTH];
-    printf("prompt> ");
-    fgets(s, MAX_COMMAND_LENGTH, stdin);
-    // remove new line character
-    s[strlen(s) - 1] = '\0';
     char** args[MAX_COMMAND_ARGS];
-    int waitFlag = WAIT;
-    char* token = strtok(s, " ");
-    int i = 0;
-    while (token != NULL) {
-        args[i++] = token;
-        token = strtok(NULL, " ");
+
+    while (true) {
+        printf("prompt> ");
+        fgets(s, MAX_COMMAND_LENGTH, stdin);
+        // remove new line character
+        s[strlen(s) - 1] = '\0';
+
+        int waitFlag = WAIT;
+        char* token = strtok(s, " ");
+        int i = 0;
+        while (token != NULL) {
+            args[i++] = token;
+            token = strtok(NULL, " ");
+        }
+        if (strcmp(args[i - 1],"&") == 0) {
+            waitFlag = DONT_WAIT;
+            args[i - 1] = NULL;
+        } else {
+            args[i] = NULL;
+        }
+        executeCommand(args, waitFlag);
     }
-    if (strcmp(args[i - 1],"&") == 0) {
-        waitFlag = DONT_WAIT;
-        args[i - 1] = NULL;
-    } else {
-        args[i] = NULL;
-    }
-    executeCommand(args, waitFlag);
     return 0;
 }

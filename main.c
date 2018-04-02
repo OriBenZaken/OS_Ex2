@@ -27,8 +27,9 @@ void initalizeJobsArray(job* jobs) {
 
 int insertToJobsArray(job* jobs, pid_t pid, char* command) {
     int i = 0;
-    while(i < MAX_JOBS_NUMBER) {
-        if(jobs[i].pid == -1) {
+    int status;
+    while (i < MAX_JOBS_NUMBER) {
+        if (jobs[i].pid == -1 || waitpid(jobs[i].pid, &status, WNOHANG) != 0) {
             jobs[i].pid = pid;
             strcpy(jobs[i].command, command);
             break;
@@ -39,6 +40,17 @@ int insertToJobsArray(job* jobs, pid_t pid, char* command) {
         return 0;
     }
     return 1;
+}
+
+void displayJobs(job* jobs) {
+    int i, status;
+    for (i = 0; i < MAX_JOBS_NUMBER; i++) {
+        if (jobs[i].pid != -1 && waitpid(jobs[i].pid, &status, WNOHANG) == 0) {
+            printf("%d                      %s\n", jobs[i].pid, jobs[i].command);
+        } else {
+            jobs[i].pid = -1;
+        }
+    }
 }
 
 void stringToExecvArgs(char** args, char* command, int* waitFlag) {
@@ -72,6 +84,10 @@ void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
     if (!strcmp(args[0], "exit")) {
         exit(0);
     }
+    if (!strcmp(args[0], "jobs") && args[1] == NULL) {
+        displayJobs(jobs);
+        return;
+    }
     pid_t pid;
     // create son process to execute the command
     pid = fork();
@@ -91,13 +107,18 @@ void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
             execvp(args[0], args);
             // execution failed. writing to STDERR
             fprintf(stderr, "Failed to execute %s\n", args[0]);
+            exit(1);
         }
         // main process
     } else {
         if (waitFlag) {
             waitpid(pid, NULL, 0);
         } else {
+            command[strlen(command) - 1] = '\0';
             int jobInsertSuccess = insertToJobsArray(jobs, pid, command);
+            if (!jobInsertSuccess) {
+                printf("failed to insert into jobs array\n");
+            }
         }
     }
 }

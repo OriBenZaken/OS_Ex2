@@ -8,22 +8,41 @@
 
 #define MAX_COMMAND_ARGS 10
 #define MAX_COMMAND_LENGTH 100
+#define MAX_JOBS_NUMBER 50
 #define DONT_WAIT 0
 #define WAIT 1
 
-int getNumberOfWords(char* str) {
-    int count = 0;
-    while(*str != '\0') {
-        if (*str == ' ') {
-            count++;
-        }
-        str++;
+typedef struct job {
+    char command[MAX_COMMAND_LENGTH];
+    pid_t pid;
+} job;
+
+void initalizeJobsArray(job* jobs) {
+    int i;
+    for (i = 0; i < MAX_JOBS_NUMBER; i++) {
+        strcpy(jobs[i].command, "");
+        jobs[i].pid = -1;
     }
-    return count + 1;
 }
 
-void stringToExecvArgs(char** args, char* s, int* waitFlag) {
-    char* token = strtok(s, " ");
+int insertToJobsArray(job* jobs, pid_t pid, char* command) {
+    int i = 0;
+    while(i < MAX_JOBS_NUMBER) {
+        if(jobs[i].pid == -1) {
+            jobs[i].pid = pid;
+            strcpy(jobs[i].command, command);
+            break;
+        }
+        i++;
+    }
+    if (i == MAX_JOBS_NUMBER) {
+        return 0;
+    }
+    return 1;
+}
+
+void stringToExecvArgs(char** args, char* command, int* waitFlag) {
+    char* token = strtok(command, " ");
     int i = 0;
     while (token != NULL) {
         args[i++] = token;
@@ -49,9 +68,8 @@ void changeDirectory(char** args) {
     }
 }
 
-void executeCommand(char** args, int waitFlag) {
+void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
     if (!strcmp(args[0], "exit")) {
-        printf("WOW\n");
         exit(0);
     }
     pid_t pid;
@@ -74,24 +92,37 @@ void executeCommand(char** args, int waitFlag) {
             // execution failed. writing to STDERR
             fprintf(stderr, "Failed to execute %s\n", args[0]);
         }
-    }
-    if (waitFlag && pid != 0) {
-        waitpid(pid, NULL, 0);
+        // main process
+    } else {
+        if (waitFlag) {
+            waitpid(pid, NULL, 0);
+        } else {
+            int jobInsertSuccess = insertToJobsArray(jobs, pid, command);
+        }
     }
 }
 
 int main() {
-    char s[MAX_COMMAND_LENGTH];
+
+    char command[MAX_COMMAND_LENGTH];
     char** args[MAX_COMMAND_ARGS];
+    job jobs[MAX_JOBS_NUMBER];
+    initalizeJobsArray(jobs);
 
     while (true) {
         printf("prompt> ");
-        fgets(s, MAX_COMMAND_LENGTH, stdin);
+        fgets(command, MAX_COMMAND_LENGTH, stdin);
         // remove new line character
-        s[strlen(s) - 1] = '\0';
+        command[strlen(command) - 1] = '\0';
+        char commandCpy[MAX_COMMAND_LENGTH];
+        strcpy(commandCpy, command);
+
         int waitFlag = WAIT;
-        stringToExecvArgs(args, s, &waitFlag);
-        executeCommand(args, waitFlag);
+        stringToExecvArgs(args, command, &waitFlag);
+        executeCommand(jobs, commandCpy, args, waitFlag);
+        if (!strcmp(args[0], "cat")) {
+            printf("\n");
+        }
     }
     return 0;
 }

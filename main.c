@@ -46,7 +46,7 @@ void displayJobs(job* jobs) {
     int i, status;
     for (i = 0; i < MAX_JOBS_NUMBER; i++) {
         if (jobs[i].pid != -1 && waitpid(jobs[i].pid, &status, WNOHANG) == 0) {
-            printf("%d                      %s\n", jobs[i].pid, jobs[i].command);
+            printf("%d %s\n", jobs[i].pid, jobs[i].command);
         } else {
             jobs[i].pid = -1;
         }
@@ -106,7 +106,7 @@ void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
         } else {
             execvp(args[0], args);
             // execution failed. writing to STDERR
-            fprintf(stderr, "Failed to execute %s\n", args[0]);
+            fprintf(stderr, "Error in system call");
             exit(1);
         }
         // main process
@@ -126,7 +126,7 @@ void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
 int main() {
 
     char command[MAX_COMMAND_LENGTH];
-    char** args[MAX_COMMAND_ARGS];
+    char* args[MAX_COMMAND_ARGS];
     job jobs[MAX_JOBS_NUMBER];
     initalizeJobsArray(jobs);
 

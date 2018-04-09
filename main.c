@@ -14,6 +14,9 @@
 #define FAILURE -1
 #define NO_JOB -2
 
+//global variable
+char cwd[1024];
+
 typedef struct job {
     char command[MAX_COMMAND_LENGTH];
     pid_t pid;
@@ -71,12 +74,30 @@ void stringToExecvArgs(char** args, char* command, int* waitFlag) {
 }
 
 void changeDirectory(char** args) {
-    // command is: cd. Go to home directory
-    if (args[1] ==  NULL) {
-        chdir(getenv("HOME"));
-        return;
+    // command is: 'cd' or 'cd ~'. Go to home directory
+    int successCd;
+
+    if ((args[1] ==  NULL) || (!strcmp(args[1], "~") && args[2] == NULL)) {
+
+        //get current working directory
+        getcwd(cwd, sizeof(cwd));
+
+        successCd = chdir(getenv("HOME"));
+        //setenv("OLDPWD", getenv("HOME"),1 );
+    } else  if (!strcmp(args[1], "-") && args[2] == NULL) {
+        char cwd_1[1024];
+        getcwd(cwd_1, sizeof(cwd));
+
+        successCd = chdir(cwd);
+
+        strcpy(cwd, cwd_1);
+    } else {
+
+        //get current working directory
+        getcwd(cwd, sizeof(cwd));
+
+        successCd = chdir(args[1]);
     }
-    int successCd = chdir(args[1]);
     if (successCd != 0) {
         fprintf(stderr, "Failed to execute %s\n", args[0]);
     }

@@ -82,7 +82,7 @@ void changeDirectory(char** args) {
         //get current working directory
         getcwd(previous_wd, sizeof(previous_wd));
         successCd = chdir(getenv("HOME"));
-    } else  if (!strcmp(args[1], "-") && args[2] == NULL) {
+    } else if (!strcmp(args[1], "-") && args[2] == NULL) {
         char cwd[DIRECTROY_PATH_SIZE];
         getcwd(cwd, sizeof(previous_wd));
         successCd = chdir(previous_wd);
@@ -155,6 +155,11 @@ int main() {
         fgets(command, MAX_COMMAND_LENGTH, stdin);
         // remove new line character
         command[strlen(command) - 1] = '\0';
+        // empty line
+        if (command[0] == '\0') {
+            continue;
+        }
+
         char commandCpy[MAX_COMMAND_LENGTH];
         strcpy(commandCpy, command);
 

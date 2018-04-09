@@ -16,7 +16,7 @@
 #define DIRECTROY_PATH_SIZE 1024
 
 //global variable - saves the previous  working directory
-char previous_wd[DIRECTROY_PATH_SIZE];
+
 
 typedef struct job {
     char command[MAX_COMMAND_LENGTH];
@@ -74,22 +74,25 @@ void stringToExecvArgs(char** args, char* command, int* waitFlag) {
     }
 }
 
-void changeDirectory(char** args) {
+void changeDirectory(char** args, char* previous_wd) {
     // command is: 'cd' or 'cd ~'. Go to home directory
     int successCd;
 
     if ((args[1] ==  NULL) || (!strcmp(args[1], "~") && args[2] == NULL)) {
         //get current working directory
-        getcwd(previous_wd, sizeof(previous_wd));
+        getcwd(previous_wd, sizeof(DIRECTROY_PATH_SIZE));
         successCd = chdir(getenv("HOME"));
     } else if (!strcmp(args[1], "-") && args[2] == NULL) {
         char cwd[DIRECTROY_PATH_SIZE];
-        getcwd(cwd, sizeof(previous_wd));
+        getcwd(cwd, sizeof(DIRECTROY_PATH_SIZE));
         successCd = chdir(previous_wd);
+        if (successCd == 0) {
+            printf("%s\n", previous_wd);
+        }
         strcpy(previous_wd, cwd);
     } else {
         //get current working directory
-        getcwd(previous_wd, sizeof(previous_wd));
+        getcwd(previous_wd, sizeof(DIRECTROY_PATH_SIZE));
         successCd = chdir(args[1]);
     }
     if (successCd != 0) {
@@ -97,7 +100,7 @@ void changeDirectory(char** args) {
     }
 }
 
-void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
+void executeCommand(job* jobs, char* command, char** args, int waitFlag, char* previous_wd) {
     int retVal;
     if (!strcmp(args[0], "exit")) {
         exit(0);
@@ -107,7 +110,7 @@ void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
         return;
     } else if (!strcmp(args[0], "cd")) {
         printf("%d\n", getpid());
-        changeDirectory(args);
+        changeDirectory(args, previous_wd);
         return;
     }
     pid_t pid;
@@ -148,6 +151,7 @@ int main() {
     char command[MAX_COMMAND_LENGTH];
     char* args[MAX_COMMAND_ARGS];
     job jobs[MAX_JOBS_NUMBER];
+    char previous_wd[DIRECTROY_PATH_SIZE];
     initalizeJobsArray(jobs);
 
     while (true) {
@@ -165,7 +169,7 @@ int main() {
 
         int waitFlag = WAIT;
         stringToExecvArgs(args, command, &waitFlag);
-        executeCommand(jobs, commandCpy, args, waitFlag);
+        executeCommand(jobs, commandCpy, args, waitFlag, previous_wd);
         if (!strcmp(args[0], "cat")) {
             printf("\n");
         }

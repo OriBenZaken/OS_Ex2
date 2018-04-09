@@ -11,6 +11,8 @@
 #define MAX_JOBS_NUMBER 50
 #define DONT_WAIT 0
 #define WAIT 1
+#define FAILURE -1
+#define NO_JOB -2
 
 typedef struct job {
     char command[MAX_COMMAND_LENGTH];
@@ -21,7 +23,7 @@ void initalizeJobsArray(job* jobs) {
     int i;
     for (i = 0; i < MAX_JOBS_NUMBER; i++) {
         strcpy(jobs[i].command, "");
-        jobs[i].pid = -1;
+        jobs[i].pid = NO_JOB;
     }
 }
 
@@ -29,7 +31,7 @@ int insertToJobsArray(job* jobs, pid_t pid, char* command) {
     int i = 0;
     int status;
     while (i < MAX_JOBS_NUMBER) {
-        if (jobs[i].pid == -1 || waitpid(jobs[i].pid, &status, WNOHANG) != 0) {
+        if (jobs[i].pid == NO_JOB || waitpid(jobs[i].pid, &status, WNOHANG) != 0) {
             jobs[i].pid = pid;
             strcpy(jobs[i].command, command);
             break;
@@ -45,10 +47,10 @@ int insertToJobsArray(job* jobs, pid_t pid, char* command) {
 void displayJobs(job* jobs) {
     int i, status;
     for (i = 0; i < MAX_JOBS_NUMBER; i++) {
-        if (jobs[i].pid != -1 && waitpid(jobs[i].pid, &status, WNOHANG) == 0) {
+        if (jobs[i].pid != NO_JOB && waitpid(jobs[i].pid, &status, WNOHANG) == 0) {
             printf("%d %s\n", jobs[i].pid, jobs[i].command);
         } else {
-            jobs[i].pid = -1;
+            jobs[i].pid = NO_JOB;
         }
     }
 }
@@ -81,11 +83,16 @@ void changeDirectory(char** args) {
 }
 
 void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
+    int retVal;
     if (!strcmp(args[0], "exit")) {
         exit(0);
     }
     if (!strcmp(args[0], "jobs") && args[1] == NULL) {
         displayJobs(jobs);
+        return;
+    } else if (!strcmp(args[0], "cd")) {
+        printf("%d\n", getpid());
+        changeDirectory(args);
         return;
     }
     pid_t pid;
@@ -101,13 +108,11 @@ void executeCommand(job* jobs, char* command, char** args, int waitFlag) {
     // son process
     if (pid == 0) {
         int i = 0;
-        if (!strcmp(args[0], "cd")) {
-            changeDirectory(args);
-        } else {
-            execvp(args[0], args);
+        retVal = execvp(args[0], args);
+        if (retVal == FAILURE) {
             // execution failed. writing to STDERR
-            fprintf(stderr, "Error in system call");
-            exit(1);
+            fprintf(stderr, "Error in system call\n");
+            exit(FAILURE);
         }
         // main process
     } else {

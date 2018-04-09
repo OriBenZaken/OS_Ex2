@@ -14,8 +14,8 @@
 #define FAILURE -1
 #define NO_JOB -2
 
-//global variable
-char cwd[1024];
+//global variable - saves the previous  working directory
+char previous_wd[1024];
 
 typedef struct job {
     char command[MAX_COMMAND_LENGTH];
@@ -78,24 +78,17 @@ void changeDirectory(char** args) {
     int successCd;
 
     if ((args[1] ==  NULL) || (!strcmp(args[1], "~") && args[2] == NULL)) {
-
         //get current working directory
-        getcwd(cwd, sizeof(cwd));
-
+        getcwd(previous_wd, sizeof(previous_wd));
         successCd = chdir(getenv("HOME"));
-        //setenv("OLDPWD", getenv("HOME"),1 );
     } else  if (!strcmp(args[1], "-") && args[2] == NULL) {
-        char cwd_1[1024];
-        getcwd(cwd_1, sizeof(cwd));
-
-        successCd = chdir(cwd);
-
-        strcpy(cwd, cwd_1);
+        char cwd[1024];
+        getcwd(cwd, sizeof(previous_wd));
+        successCd = chdir(previous_wd);
+        strcpy(previous_wd, cwd);
     } else {
-
         //get current working directory
-        getcwd(cwd, sizeof(cwd));
-
+        getcwd(previous_wd, sizeof(previous_wd));
         successCd = chdir(args[1]);
     }
     if (successCd != 0) {
